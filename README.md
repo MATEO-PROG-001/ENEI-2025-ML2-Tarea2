@@ -1,125 +1,39 @@
-# Assignment 2: Principal Component Analysis, Neural Networks
+# Assignment 2 — Reporte de Resultados  
+**Integrantes:** 
+- Joel Mateo Manrique Velasquez
+- Luis Enrique Perez Ramos
+- Ginno Jacinto Castro  
 
-Deadline: Tuesday, November 4th, 2025, 23:59
 
-Environment: Python, numpy, pandas, matplotlib, scikit-learn, pytorch.
-
----
-
-## Programming Exercises
-
-### Part I: Eigenfaces for Face Recognition
-
-1. **Load the Training and Test Sets**
-
-   Load the training images contained in `data` into a matrix **X**.
-   There are 540 training images, each with resolution $50 \times 50$. Flatten each image into a 2500-dimensional vector. Thus, **X** should have shape **$540 \times 2500$**, where each row is a flattened face image.
-
-   Similarly, build the test matrix **$X_{test}$**, which should have shape **$100 \times 2500$**.
-
-   Display an example training and test image in grayscale.
-
-   Example code snippet for loading the training data:
-
-   ```python
-   import numpy as np
-   from matplotlib import pylab as plt
-   import matplotlib.cm as cm
-   import imageio
-
-   train_labels, train_data = [], []
-   for line in open('./data/train.txt'):
-       im = imageio.v2.imread("" + line.strip().split()[0])
-       train_data.append(im.reshape(2500,))
-       train_labels.append(line.strip().split()[1])
-   train_data, train_labels = np.array(train_data, dtype=float), np.array(train_labels, dtype=int)
-
-   print(train_data.shape, train_labels.shape)
-   plt.imshow(train_data[10, :].reshape(50,50), cmap = cm.Greys_r)
-   plt.show()
-   ```
-
-2. **Average Face**
-
-   Compute the *average face* vector $ \mu $ by averaging all rows of **$X$**.
-   Display this average face as a grayscale image.
-
-3. **Mean Subtraction**
-
-   Subtract the average face $\mu$ from each row of **$X$**, i.e., replace each image vector $x_i$ with $x_i - \mu$.
-   Display an example mean-subtracted image.
-   Apply the same mean subtraction to **$X_{test}$**, using the same $\mu$.
-   From now on, for training and testing, you should use the demeaned matrix.
-
-4. **Eigenfaces**
-
-   Compute the eigendecomposition of $X^T X = V \Lambda V^T$ to obtain eigenvectors.
-   The rows of $V^T$ correspond to eigenfaces.
-
-   Display 10 eigenfaces as grayscale images.
-
-   Note: Eigenvectors may be complex-valued. You will need to convert them to real values before displaying (e.g., using `np.real`).
-
-5. **Eigenface Features**
-
-   The top $r$ eigenfaces span an $r$-dimensional **face space**.
-   Represent an image vector $z$ in this space as:
-   
-$$
-   f = [v_1, v_2, \ldots, v_r]^T z
-$$
-
-   Write a function to compute:
-
-   * **$F$**: feature matrix for training data (shape: $540 \times r$)
-   * **$F_{test}$**: feature matrix for test data (shape: $100 \times r$)
-
-   by multiplying **$X$** and **$X_{test}$** with the top $ r$ eigenfaces.
-
-6. **Face Recognition**
-
-   Use **logistic regression** (e.g., from `scikit-learn`) for classification.
-
-   * Extract features using $ r = 10 $ (supress the intercept, as it is not necessary because the matrix is demeaned)
-   * Train logistic regression on **$F$** and evaluate on **$F_{test}$**
-   * Report classification accuracy on the test set
-   * Then repeat for $ r = 1, 2, \ldots, 200 $ and plot accuracy as a function of $ r $
-
-7. **Low-Rank Reconstruction Loss**
-
-   Reconstruct approximations $ X' $ from the features by multiplying:
-
-$$
-X' = F \cdot \text{(top } r \text{ eigenfaces)}
-$$
-
-   Compute and plot the average Frobenius distance:
-
-$$
-   d(X, X') = \sqrt{\text{tr}((X - X')^T (X - X'))}
-$$
-
-   for $ r = 1, 2, \ldots, 200 $.
-
-### Part II: Neural Networks
-
-Modify the example on Convolutional Neural Networks shown in the practical sessions, to use the original MNIST dataset. Create and train all models shown, and plot their convergence curves. To download the MNIST data, use:
-
-```python
-mnist_train = datasets.MNIST(
-    "/content/sample_data", download = True, train = True,
-    transform = transforms.ToTensor()
-)
-mnist_test = datasets.MNIST(
-    "/content/sample_data", train = False, transform = transforms.ToTensor()
-)
-```
 
 ---
 
-### Deliverables
+## Parte 1 · Eigenfaces (PCA) para reconocimiento facial
 
-  * You must fork the original repository, and turn in a link to your group's repository.
-  * This fork must have a Jupyter notebook in the src folder, which contains all the code to solve each of the problems.
-  * For the written commentary, you may choose between presenting it in Markdown cells within the Jupyter notebook or creating a separate README.md inside the src folder.
+Trabajamos con 540 imágenes de entrenamiento y 100 de prueba (50×50 píxeles; matrices 540×2500 y 100×2500). Calculamos la **cara promedio** y centramos ambos conjuntos restándole esa media. A partir de X^T X obtuvimos las **eigenfaces** y proyectamos cada imagen en las primeras r componentes para construir las características; luego clasificamos con **regresión logística** sin intercepto.
 
+En clasificación, con **r=10** logramos **accuracy = 0.7600**. La curva *Precisión vs r* crece con rapidez y se **estabiliza entre r ≈ 60–80**, donde la exactitud se mantiene alrededor de **0.91–0.93**; a partir de ahí el beneficio adicional es mínimo e incluso puede decrecer levemente.
+
+En reconstrucción de bajo rango, el error ||X - X'||_F **disminuye de forma monótona** al aumentar r: de ~**101** con r=1, ~**57** con r=10 hasta ~**11** con r=200.
+
+**Conclusión:** Para reconocimiento recomendamos **r ≈ 60–80** (buen equilibrio entre desempeño y dimensión). Si se prioriza reconstrucción visual, conviene usar r más altos.
+
+**Figuras generadas:**
+- Cara promedio
+- Precisión de clasificación vs r
+- Error de reconstrucción (Frobenius) vs r
+
+---
+
+## Parte 2 · CNN en MNIST
+
+Usamos **MNIST** (28×28, 10 clases) con `ToTensor()` (escala [0,1]). Entrenamos una **CNN tipo LeNet** con dos bloques *Conv–ReLU–MaxPool* seguidos de capas densas. Configuración: **5 épocas**, **CrossEntropy**, **Adam (LR=1e−3)**, dispositivo **CPU**.
+
+El entrenamiento fue estable: la pérdida de prueba bajó de **0.0665** a **0.0306** en las primeras **4** épocas y subió levemente a **0.0325** en la **5** (indicio de **sobreajuste leve**). La exactitud de prueba avanzó **97.88 → 98.50 → 98.75 → 98.97 → 99.05%**, alcanzando **99.05%** al final.
+
+**Conclusión:** Una CNN sencilla alcanza ~**99%** en MNIST con convergencia rápida. El pequeño sobreajuste observado al final podría mitigarse con BatchNorm/Dropout o early stopping.
+
+**Figura generada:**
+- Curvas de convergencia (pérdida de entrenamiento vs pérdida de prueba)
+
+---
